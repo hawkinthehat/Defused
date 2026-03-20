@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DEFUSE | Ultimate Edition</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --bg: #020617; --teal: #2dd4bf; --text: #f1f5f9; --red: #f43f5e; --card: #1e293b; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; touch-action: none; text-align: center; }
+        
+        .screen { display: none; height: 100vh; width: 100vw; flex-direction: column; justify-content: center; align-items: center; position: absolute; }
+        .active { display: flex; animation: fadeIn 0.8s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* BUTTONS */
+        .btn { background: var(--teal); color: var(--bg); border: none; padding: 22px; border-radius: 18px; width: 85%; max-width: 340px; font-weight: 900; font-size: 1.1rem; margin: 12px 0; cursor: pointer; z-index: 10; letter-spacing: 2px; text-transform: uppercase; }
+        .sos { background: var(--red); color: white; box-shadow: 0 0 30px rgba(244, 63, 94, 0.4); }
+        .secondary { background: none; border: 1px solid var(--teal); color: var(--teal); }
+
+        /* PANIC MODULE */
+        .panic-box { background: var(--card); border: 2px solid var(--red); padding: 30px; border-radius: 20px; width: 80%; margin: 20px; font-size: 1.5rem; font-weight: bold; }
+        
+        /* VISUAL ANCHORS */
+        .anchor { position: absolute; width: 100px; height: 100px; background: var(--teal); border-radius: 50%; filter: blur(40px); opacity: 0; z-index: 2; transition: 2s; }
+        #left-anchor { left: -50px; top: 40%; }
+        #right-anchor { right: -50px; top: 40%; }
+        .visual-active .anchor { opacity: 0.2; animation: pulse 4s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; }
+    </style>
+</head>
+<body>
+
+    <div id="home" class="screen active">
+        <h1 style="color: var(--teal); letter-spacing: 8px; font-weight: 900;">DEFUSE</h1>
+        <button class="btn sos" onclick="show('panic')">SYSTEM RED: PANIC</button>
+        <button class="btn" onclick="show('visual')">Visual & Binaural Reset</button>
+        <button class="btn secondary" onclick="show('sos')">Vagus Pacer</button>
+    </div>
+
+    <div id="panic" class="screen">
+        <h2 style="color: var(--red); letter-spacing: 2px;">NEURAL HIJACK</h2>
+        <div class="panic-box" id="panic-task">Initializing...</div>
+        <button class="btn" onclick="nextPanicTask()">NEXT TASK</button>
+        <button onclick="show('home')" style="background:none; border:none; color:white; opacity:0.5; margin-top:20px;">I AM CALM NOW</button>
+    </div>
+
+    <div id="visual" class="screen">
+        <div id="left-anchor" class="anchor"></div>
+        <div id="right-anchor" class="anchor"></div>
+        <canvas id="canvas"></canvas>
+        <div id="status" style="z-index:10; pointer-events:none;"><h3>FOLLOW THE GLOW</h3></div>
+        <button onclick="exitAll()" style="position:absolute; bottom:40px; z-index:100; color:white; background:rgba(0,0,0,0.3); border:1px solid white; padding:10px 20px; border-radius:20px;">EXIT</button>
+    </div>
+
+    <div id="sos" class="screen">
+        <div id="pacer-circle" style="width:150px; height:150px; border:5px solid var(--teal); border-radius:50%;"></div>
+        <h2 id="pacer-text" style="margin-top:40px;">READY?</h2>
+        <button class="btn secondary" onclick="show('home')">BACK</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [], mouse = { x: null, y: null };
+        let timerInt, pacerInt, audioCtx, leftOsc, rightOsc, binauralGain;
+
+        const panicTasks = [
+            "Name 4 cities starting with 'S'",
+            "Subtract 7 from 100... then 7 again.",
+            "Find 3 things that are NAVY BLUE.",
+            "Say the Alphabet BACKWARDS.",
+            "Name 5 things you can TOUCH right now.",
+            "Count 10 breaths: Long exhale.",
+            "Name 3 types of trees."
+        ];
+
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+        function show(id) {
+            initAudio();
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id === 'visual') startVisual();
+            if (id === 'panic') nextPanicTask();
+            if (id === 'sos') startPacer();
+        }
+
+        /* --- PANIC LOGIC --- */
+        function nextPanicTask() {
+            const task = panicTasks[Math.floor(Math.random() * panicTasks.length)];
+            document.getElementById('panic-task').innerText = task;
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        /* --- VISUAL & BINAURAL --- */
+        function startVisual() {
+            document.body.classList.add('visual-active');
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            particles = []; for (let i = 0; i < 40; i++) particles.push(new Particle());
+            
+            leftOsc = audioCtx.createOscillator(); rightOsc = audioCtx.createOscillator();
+            binauralGain = audioCtx.createGain();
+            leftOsc.frequency.value = 200; rightOsc.frequency.value = 210;
+            leftOsc.connect(binauralGain); rightOsc.connect(binauralGain);
+            binauralGain.connect(audioCtx.destination);
+            binauralGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            binauralGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 2);
+            leftOsc.start(); rightOsc.start();
+            animate();
+        }
+
+        function exitAll() {
+            document.body.classList.remove('visual-active');
+            if(binauralGain) {
+                binauralGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+                setTimeout(() => { leftOsc?.stop(); rightOsc?.stop(); }, 600);
+            }
+            show('home');
+        }
+
+        /* --- PACER --- */
+        function startPacer() {
+            let phase = 0;
+            const circle = document.getElementById('pacer-circle');
+            const text = document.getElementById('pacer-text');
+            pacerInt = setInterval(() => {
+                if (phase === 0) {
+                    circle.style.transition = "4s linear"; circle.style.transform = "scale(1.5)";
+                    text.innerText = "INHALE"; phase = 1;
+                } else {
+                    circle.style.transition = "8s linear"; circle.style.transform = "scale(0.8)";
+                    text.innerText = "EXHALE SLOWLY"; phase = 0;
+                }
+            }, phase === 0 ? 4000 : 8000);
+        }
+
+        /* --- ENGINE --- */
+        class Particle {
+            constructor() { this.x = Math.random()*canvas.width; this.y = Math.random()*canvas.height; this.size = 3; this.sx = Math.random()-0.5; this.sy = Math.random()-0.5; }
+            update() {
+                this.x+=this.sx; this.y+=this.sy;
+                if(mouse.x){
+                    let dx=mouse.x-this.x, dy=mouse.y-this.y, d=Math.sqrt(dx*dx+dy*dy);
+                    if(d<120){ this.x+=dx*0.08; this.y+=dy*0.08; this.c='#2dd4bf'; } else { this.c='rgba(45,212,191,0.2)'; }
+                }
+                if(this.x>canvas.width||this.x<0)this.sx*=-1; if(this.y>canvas.height||this.y<0)this.sy*=-1;
+            }
+            draw() { ctx.fillStyle=this.c; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+        }
+        function animate() {
+            if(!document.body.classList.contains('visual-active')) return;
+            ctx.fillStyle='rgba(2,6,23,0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            particles.forEach(p=>{p.update(); p.draw();}); requestAnimationFrame(animate);
+        }
+        window.addEventListener('touchmove', e=>{ mouse.x=e.touches[0].clientX; mouse.y=e.touches[0].clientY; }, {passive:false});
+    </script>
+</body>
+</html>
