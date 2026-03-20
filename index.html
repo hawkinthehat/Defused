@@ -157,5 +157,49 @@
         }
         window.addEventListener('touchmove', e=>{ mouse.x=e.touches[0].clientX; mouse.y=e.touches[0].clientY; }, {passive:false});
     </script>
+    <div id="success" class="screen" style="background: radial-gradient(circle, #134e4a 0%, #020617 100%);">
+    <div style="border: 2px solid var(--teal); padding: 40px; border-radius: 50%; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; box-shadow: 0 0 30px var(--teal);">
+        <span style="font-size: 3rem; color: var(--teal);">✓</span>
+    </div>
+    <h1 style="color: var(--teal); letter-spacing: 4px;">NEUTRALIZED</h1>
+    <p id="success-quote" style="opacity: 0.7; font-style: italic; max-width: 280px; line-height: 1.5;">"The storm has passed. You are the sky."</p>
+    <button class="btn" onclick="show('home')" style="margin-top: 40px; background: none; color: white; border: 1px solid white;">RETURN TO BASE</button>
+</div>
+
+<script>
+    function startVisual() {
+        // ... (existing particle/audio logic)
+        timerVal = 60;
+        timerInt = setInterval(() => {
+            timerVal--;
+            document.getElementById('timer').innerText = timerVal;
+            if(timerVal <= 0) {
+                clearInterval(timerInt);
+                triggerSuccess();
+            }
+        }, 1000);
+    }
+
+    function triggerSuccess() {
+        // 1. Kill the drone and visuals
+        exitAll(); 
+        
+        // 2. Select a random grounding quote
+        const quotes = [
+            "The storm has passed. You are the sky.",
+            "System Reset. You are back in control.",
+            "Pulse Stabilized. Proceed with focus.",
+            "You navigated the spike. You are safe."
+        ];
+        document.getElementById('success-quote').innerText = quotes[Math.floor(Math.random() * quotes.length)];
+        
+        // 3. Show Success Screen
+        show('success');
+        
+        // 4. Victory Vibration (Long-Short-Long)
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+</script>
+
 </body>
 </html>
